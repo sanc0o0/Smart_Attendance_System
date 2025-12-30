@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+
+# Environments & secrets
+.env
+.venv/
+.venv/R
+.idea/
+.vscode/
+
+# Data & biometrics
+Dataset/
+Encodings/
+Attendance/
+
+# Backend cache
+Backend/__pycache__/
+
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
