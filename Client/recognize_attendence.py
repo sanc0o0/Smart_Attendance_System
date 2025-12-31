@@ -5,7 +5,9 @@ import face_recognition
 import pickle
 import numpy as np
 import os
-from datetime import datetime
+
+last_marked = {}
+COOLDOWN_SECONDS = 30
 
 # ----------------------------
 # BACKEND API CONFIG
@@ -16,30 +18,30 @@ API_URL = "http://127.0.0.1:8000/mark-attendance"
 # CONFIGURATION
 # ----------------------------
 ENCODING_FILE = "Encodings/face_encodings.pkl"
-ATTENDANCE_DIR = "Attendance"
+# ATTENDANCE_DIR = "Attendance"
 CONFIDENCE_THRESHOLD = 0.6
 
-os.makedirs(ATTENDANCE_DIR, exist_ok=True)
+# os.makedirs(ATTENDANCE_DIR, exist_ok=True)
 
-# Create today's attendance file
-today_date = datetime.now().strftime("%Y-%m-%d")
-attendance_file = f"{ATTENDANCE_DIR}/attendance_{today_date}.csv"
+# # Create today's attendance file
+# today_date = datetime.now().strftime("%Y-%m-%d")
+# attendance_file = f"{ATTENDANCE_DIR}/attendance_{today_date}.csv"
 
 # ----------------------------
 # FETCH ALREADY MARKED STUDENTS (TODAY)
 # ----------------------------
-marked_students = set()
+# marked_students = set()
 
-try:
-    response = requests.get("http://127.0.0.1:8000/marked-today")
-    data = response.json()
+# try:
+#     response = requests.get("http://127.0.0.1:8000/marked-today")
+#     data = response.json()
 
-    if data.get("status") == "success":
-        marked_students = set(data.get("marked", []))
-        print(f"[INFO] Already marked today: {marked_students}")
+#     if data.get("status") == "success":
+#         marked_students = set(data.get("marked", []))
+#         print(f"[INFO] Already marked today: {marked_students}")
 
-except Exception as e:
-    print("[WARNING] Could not fetch today's attendance:", e)
+# except Exception as e:
+#     print("[WARNING] Could not fetch today's attendance:", e)
 
 # ----------------------------
 # LOAD FACE ENCODINGS
@@ -57,12 +59,12 @@ print(f"[INFO] Total known faces: {len(known_encodings)}")
 # ----------------------------
 # LOAD ATTENDANCE (IF EXISTS)
 # ----------------------------
-marked_students = set()
+# marked_students = set()
 
-if os.path.exists(attendance_file):
-    with open(attendance_file, "r") as f:
-        for line in f.readlines()[1:]:
-            marked_students.add(line.split(",")[0])
+# if os.path.exists(attendance_file):
+#     with open(attendance_file, "r") as f:
+#         for line in f.readlines()[1:]:
+#             marked_students.add(line.split(",")[0])
 
 # ----------------------------
 # START CAMERA
@@ -96,43 +98,29 @@ while True:
                 name = known_names[best_match_index]
                 color = (0, 255, 0)
 
-                # Mark attendance if not already marked
-                if name in marked_students:
-                    continue  # daily cooldown
+                now = datetime.now()
 
+                if name in last_marked:
+                    if (now - last_marked[name]).seconds < COOLDOWN_SECONDS:
+                        continue
 
-                    payload = {
-                        "name": name,
-                        "timestamp": datetime.now().isoformat()
-                    }
+                payload = {"name": name}
 
-                    try:
-                        response = requests.post(API_URL, json=payload)
-                        result = response.json()
+                try:
+                    response = requests.post(API_URL, json=payload)
+                    result = response.json()
 
-                        status = result.get("status")
-                        detail = result.get("detail", "").lower()
+                    status = result.get("status")
 
-                        if status == "success":
-                            print(f"[ATTENDANCE] {name} marked successfully")
-                            marked_students.add(name)
+                    if status == "success":
+                        print(f"[ATTENDANCE] {name} marked successfully")
+                        last_marked[name] = now
 
-                        elif status == "already_marked" or "already marked" in detail:
-                            print(f"[INFO] {name} already marked today")
-                            marked_students.add(name)
+                    elif status == "already_marked":
+                        last_marked[name] = now
 
-                        else:
-                            print(f"[ERROR] Unexpected backend response: {result}")
-
-
-
-                    except KeyError as e:
-                        print("[ERROR] Backend response missing key:", e, result)
-
-                    except Exception as e:
-                        print("[ERROR] Attendance processing failed:", e)
-
-
+                except Exception as e:
+                    print("[ERROR] Backend communication failed:", e)
 
         # Draw face box & name``
         cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
