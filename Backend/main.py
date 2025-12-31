@@ -51,17 +51,40 @@ def mark_attendance(payload: dict, db: Session = Depends(get_db)):
     try:
         db.add(attendance)
         db.commit()
+
+        return {
+            "status": "success",
+            "message": f"{name} marked successfully for today",
+            "data": {
+                "name": name,
+                "date": str(today),
+                "time": now_ist.strftime("%I:%M %p"),
+                "timezone": "IST"
+            }
+        }
+
     except Exception:
         db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail=f"{name} already marked today"
-        )
+
+        return {
+            "status": "already_marked",
+            "message": f"{name} already marked today",
+            "data": None
+        }
+
+
+@app.get("/marked-today")
+def get_marked_today(db: Session = Depends(get_db)):
+    today = datetime.now(IST).date()
+
+    records = (
+        db.query(Student.name)
+        .join(Attendance)
+        .filter(Attendance.attendance_date == today)
+        .all()
+    )
 
     return {
         "status": "success",
-        "name": name,
-        "date": str(today),
-        "time": now_ist.strftime("%I:%M %p"),
-        "timezone": "IST"
+        "marked": [r[0] for r in records]
     }
