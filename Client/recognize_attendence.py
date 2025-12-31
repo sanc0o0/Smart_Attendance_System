@@ -26,6 +26,22 @@ today_date = datetime.now().strftime("%Y-%m-%d")
 attendance_file = f"{ATTENDANCE_DIR}/attendance_{today_date}.csv"
 
 # ----------------------------
+# FETCH ALREADY MARKED STUDENTS (TODAY)
+# ----------------------------
+marked_students = set()
+
+try:
+    response = requests.get("http://127.0.0.1:8000/marked-today")
+    data = response.json()
+
+    if data.get("status") == "success":
+        marked_students = set(data.get("marked", []))
+        print(f"[INFO] Already marked today: {marked_students}")
+
+except Exception as e:
+    print("[WARNING] Could not fetch today's attendance:", e)
+
+# ----------------------------
 # LOAD FACE ENCODINGS
 # ----------------------------
 print("[INFO] Loading face encodings...")
@@ -81,7 +97,9 @@ while True:
                 color = (0, 255, 0)
 
                 # Mark attendance if not already marked
-                if name not in marked_students:
+                if name in marked_students:
+                    continue  # daily cooldown
+
 
                     payload = {
                         "name": name,
