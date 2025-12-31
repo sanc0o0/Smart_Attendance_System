@@ -1,0 +1,72 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from datetime import datetime
+import pytz
+from sqlalchemy import func
+
+from .database import SessionLocal
+from .models import Attendance, Student
+
+router = APIRouter(prefix="/analytics", tags=["Analytics"])
+
+IST = pytz.timezone("Asia/Kolkata")
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@router.get("/today")
+def attendance_today(db: Session = Depends(get_db)):
+    today = datetime.now(IST).date()
+
+    morning_count = (
+        db.query(func.count(Attendance.id))
+        .filter(
+            Attendance.attendance_date == today,
+            Attendance.session == "Morning"
+        )
+        .scalar()
+    )
+
+    afternoon_count = (
+        db.query(func.count(Attendance.id))
+        .filter(
+            Attendance.attendance_date == today,
+            Attendance.session == "Afternoon"
+        )
+        .scalar()
+    )
+
+    return {
+        "date": str(today),
+        "morning": morning_count,
+        "afternoon": afternoon_count,
+        "total": morning_count + afternoon_count
+    }
+
+
+@router.get("/students")
+def attendance_by_student(db: Session = Depends(get_db)):
+    results = (
+        db.query(
+            Student.name,
+            func.count(func.distinct(Attendance.attendance_date)).label("total_days")
+        )
+        .join(Attendance)
+        .group_by(Student.id)
+        .order_by(func.count(func.distinct(Attendance.attendance_date)).desc())
+        .all()
+    )
+
+    return [
+        {
+            "name": name,
+            "total_days": total_days
+        }
+        for name, total_days in results
+    ]

@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 import pytz
+
+from .analytics import router as analytics_router
 from . import models
 from .database import SessionLocal, Base, engine
 from .models import Student, Attendance
@@ -24,6 +26,8 @@ def get_db():
         yield db
     finally:
         db.close()
+
+app.include_router(analytics_router)
 
 @app.get("/")
 def read_root():
@@ -114,3 +118,5 @@ def get_marked_today(db: Session = Depends(get_db)):
         "status": "success",
         "marked": [r[0] for r in records]
     }
+
+
