@@ -2,13 +2,20 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 import pytz
-
-from .database import SessionLocal
+from . import models
+from .database import SessionLocal, Base, engine
 from .models import Student, Attendance
+from .schemas import AttendanceRequest
+
 
 app = FastAPI()
 
+Base.metadata.create_all(bind=engine)
+
 IST = pytz.timezone("Asia/Kolkata")
+
+def get_session(time_obj):
+    return "morning" if time_obj.hour < 12 else "afternoon"
 
 # Dependency
 def get_db():
@@ -24,9 +31,10 @@ def read_root():
 
 
 @app.post("/mark-attendance")
-def mark_attendance(payload: dict, db: Session = Depends(get_db)):
-    name = payload["name"]
-    face_id = payload.get("face_id", name.lower().replace(" ", "_"))
+def mark_attendance(payload: AttendanceRequest, db: Session = Depends(get_db)):
+    name = payload.name
+    face_id = payload.face_id or name.lower().replace(" ", "_")
+
 
     now_ist = datetime.now(IST)
     today = now_ist.date()
@@ -48,29 +56,47 @@ def mark_attendance(payload: dict, db: Session = Depends(get_db)):
         attendance_time=time_now
     )
 
-    try:
-        db.add(attendance)
-        db.commit()
+    session = get_session(time_now)
 
+    existing = db.query(Attendance).filter(
+        Attendance.student_id == student.id,
+        Attendance.attendance_date == today,
+        Attendance.session == session
+    ).first()
+
+    if existing:
         return {
-            "status": "success",
-            "message": f"{name} marked successfully for today",
+            "status": "already_marked",
+            "message": f"{name} already marked for {session}",
             "data": {
                 "name": name,
                 "date": str(today),
-                "time": now_ist.strftime("%I:%M %p"),
-                "timezone": "IST"
+                "session": session
             }
         }
 
-    except Exception:
-        db.rollback()
+    attendance = Attendance(
+        student_id=student.id,
+        attendance_date=today,
+        attendance_time=time_now,
+        session=session
+    )
 
-        return {
-            "status": "already_marked",
-            "message": f"{name} already marked today",
-            "data": None
+    db.add(attendance)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"{name} marked successfully for {session}",
+        "data": {
+            "name": name,
+            "date": str(today),
+            "time": now_ist.strftime("%I:%M %p"),
+            "session": session,
+            "timezone": "IST"
         }
+    }
+
 
 
 @app.get("/marked-today")
