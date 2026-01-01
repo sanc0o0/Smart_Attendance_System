@@ -24,30 +24,23 @@ def get_db():
 def attendance_today(db: Session = Depends(get_db)):
     today = datetime.now(IST).date()
 
-    morning_count = (
-        db.query(func.count(Attendance.id))
-        .filter(
-            Attendance.attendance_date == today,
-            Attendance.session == "Morning"
-        )
-        .scalar()
-    )
+    morning = db.query(func.count(Attendance.id)).filter(
+        Attendance.attendance_date == today,
+        Attendance.session == "morning"
+    ).scalar()
 
-    afternoon_count = (
-        db.query(func.count(Attendance.id))
-        .filter(
-            Attendance.attendance_date == today,
-            Attendance.session == "Afternoon"
-        )
-        .scalar()
-    )
+    afternoon = db.query(func.count(Attendance.id)).filter(
+        Attendance.attendance_date == today,
+        Attendance.session == "afternoon"
+    ).scalar()
 
     return {
         "date": str(today),
-        "morning": morning_count,
-        "afternoon": afternoon_count,
-        "total": morning_count + afternoon_count
+        "morning": morning,
+        "afternoon": afternoon,
+        "total": morning + afternoon
     }
+
 
 
 @router.get("/students")
