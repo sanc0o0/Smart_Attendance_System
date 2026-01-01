@@ -1,6 +1,7 @@
 from datetime import time
 from sqlalchemy.orm import Session
 from .models import AttendanceSession
+from .holidays import HOLIDAYS
 
 MORNING_START = time(8, 0)
 MORNING_END = time(12, 59)
@@ -10,6 +11,17 @@ AFTERNOON_END = time(17, 30)
 
 
 def resolve_session(db: Session, date, current_time):
+    weekday = date.weekday() # Monday is 0, Sunday is 6 
+
+    # Check for weekend
+    if weekday >= 5:
+        return None, "Holiday: Weekend"
+    
+    # Check for public holiday
+    if date in HOLIDAYS:
+        return None, "Holiday: Public Holiday"
+    
+    # Determine session
     if MORNING_START <= current_time <= MORNING_END:
         session_name = "morning"
         close_time = MORNING_END
