@@ -1,6 +1,9 @@
 from sqlalchemy import Column, Integer, String, Date, Time, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 from .database import Base
+from sqlalchemy.types import Boolean
+from datetime import time
 
 class Student(Base):
     __tablename__ = "students"
@@ -27,4 +30,19 @@ class Attendance(Base):
             "session",
             name="unique_attendance_per_session"
         ),
+    )
+
+class AttendanceSession(Base):
+    __tablename__ = "attendance_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False)
+    session = Column(String, nullable=False)  # morning / afternoon
+    is_open : Mapped[bool] = mapped_column(Boolean, default=True)
+    opened_at: Mapped[time] = mapped_column(Time, nullable=False)
+    closed_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+
+
+    __table_args__ = (
+        UniqueConstraint("date", "session", name="unique_date_session"),
     )
