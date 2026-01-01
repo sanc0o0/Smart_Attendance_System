@@ -9,9 +9,11 @@ from .database import SessionLocal, Base, engine
 from .models import Student, Attendance
 from .schemas import AttendanceRequest
 from .session_manager import resolve_session
+from .session_status import router as session_router
 
 
 app = FastAPI()
+app.include_router(session_router)
 
 Base.metadata.create_all(bind=engine)
 
