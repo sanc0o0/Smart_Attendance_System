@@ -1,86 +1,83 @@
 import cv2
 import requests
-from datetime import datetime
 import face_recognition
 import pickle
 import numpy as np
-import os
-
-last_marked = {}
-COOLDOWN_SECONDS = 30
+from datetime import datetime
+import pytz
 
 # ----------------------------
-# BACKEND API CONFIG
+# BACKEND CONFIG
 # ----------------------------
-API_URL = "http://127.0.0.1:8000/mark-attendance"
+API_MARK_ATTENDANCE = "http://127.0.0.1:8000/mark-attendance"
+API_MARKED_TODAY = "http://127.0.0.1:8000/marked-today"
 
 # ----------------------------
-# CONFIGURATION
+# FACE CONFIG
 # ----------------------------
 ENCODING_FILE = "Encodings/face_encodings.pkl"
-# ATTENDANCE_DIR = "Attendance"
 CONFIDENCE_THRESHOLD = 0.6
+STABLE_FRAMES_REQUIRED = 8
 
-# os.makedirs(ATTENDANCE_DIR, exist_ok=True)
-
-# # Create today's attendance file
-# today_date = datetime.now().strftime("%Y-%m-%d")
-# attendance_file = f"{ATTENDANCE_DIR}/attendance_{today_date}.csv"
-
-# ----------------------------
-# FETCH ALREADY MARKED STUDENTS (TODAY)
-# ----------------------------
-# marked_students = set()
-
-# try:
-#     response = requests.get("http://127.0.0.1:8000/marked-today")
-#     data = response.json()
-
-#     if data.get("status") == "success":
-#         marked_students = set(data.get("marked", []))
-#         print(f"[INFO] Already marked today: {marked_students}")
-
-# except Exception as e:
-#     print("[WARNING] Could not fetch today's attendance:", e)
+IST = pytz.timezone("Asia/Kolkata")
 
 # ----------------------------
 # LOAD FACE ENCODINGS
 # ----------------------------
 print("[INFO] Loading face encodings...")
-
 with open(ENCODING_FILE, "rb") as f:
     data = pickle.load(f)
 
-known_encodings = data["encodings"]
-known_names = data["names"]
+KNOWN_ENCODINGS = data["encodings"]
+KNOWN_NAMES = data["names"]
 
-print(f"[INFO] Total known faces: {len(known_encodings)}")
+print(f"[INFO] Loaded {len(KNOWN_NAMES)} known faces")
 
 # ----------------------------
-# LOAD ATTENDANCE (IF EXISTS)
+# CLIENT STATE
 # ----------------------------
-# marked_students = set()
+frame_stability = {}        # name -> frame count
+finalized_today = set()     # name already decided today
+rejected_today = set()      # name rejected by backend
 
-# if os.path.exists(attendance_file):
-#     with open(attendance_file, "r") as f:
-#         for line in f.readlines()[1:]:
-#             marked_students.add(line.split(",")[0])
+# ----------------------------
+# FETCH ALREADY MARKED (BACKEND TRUTH)
+# ----------------------------
+try:
+    resp = requests.get(API_MARKED_TODAY, timeout=3).json()
+    if resp.get("status") == "success":
+        finalized_today = set(resp.get("marked", []))
+        print(f"[INFO] Already marked today: {finalized_today}")
+except Exception as e:
+    print("[WARN] Could not fetch marked list:", e)
+
+# ----------------------------
+# BACKEND CALL
+# ----------------------------
+def send_attendance(name: str):
+    try:
+        resp = requests.post(
+            API_MARK_ATTENDANCE,
+            json={"name": name},
+            timeout=3
+        )
+        return resp.json()
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 # ----------------------------
 # START CAMERA
 # ----------------------------
 cap = cv2.VideoCapture(0)
-print("[INFO] Camera started. Press 'q' to quit.")
+print("[INFO] Camera started. Press 'q' to exit.")
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
-    # Convert to RGB for face_recognition
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Detect face locations & encodings
     face_locations = face_recognition.face_locations(rgb)
     face_encodings = face_recognition.face_encodings(rgb, face_locations)
 
@@ -89,43 +86,53 @@ while True:
         name = "Unknown"
         color = (0, 0, 255)
 
-        distances = face_recognition.face_distance(known_encodings, face_encoding)
+        distances = face_recognition.face_distance(KNOWN_ENCODINGS, face_encoding)
 
         if len(distances) > 0:
-            best_match_index = np.argmin(distances)
+            best_idx = np.argmin(distances)
 
-            if distances[best_match_index] < CONFIDENCE_THRESHOLD:
-                name = known_names[best_match_index]
+            if distances[best_idx] < CONFIDENCE_THRESHOLD:
+                name = KNOWN_NAMES[best_idx]
                 color = (0, 255, 0)
 
-                now = datetime.now()
+                # Ignore finalized people
+                if name in finalized_today or name in rejected_today:
+                    continue
 
-                if name in last_marked:
-                    if (now - last_marked[name]).seconds < COOLDOWN_SECONDS:
-                        continue
+                # Frame stability
+                frame_stability[name] = frame_stability.get(name, 0) + 1
 
-                payload = {"name": name}
+                if frame_stability[name] >= STABLE_FRAMES_REQUIRED:
+                    print(f"[INFO] Stable face detected: {name}")
 
-                try:
-                    response = requests.post(API_URL, json=payload)
-                    result = response.json()
-
+                    result = send_attendance(name)
                     status = result.get("status")
 
                     if status == "success":
-                        print(f"[ATTENDANCE] {name} marked successfully")
-                        last_marked[name] = now
+                        print(f"[SUCCESS] {name} marked")
+                        finalized_today.add(name)
 
                     elif status == "already_marked":
-                        last_marked[name] = now
+                        print(f"[INFO] {name} already marked")
+                        finalized_today.add(name)
 
-                except Exception as e:
-                    print("[ERROR] Backend communication failed:", e)
+                    elif status == "rejected":
+                        print(f"[REJECTED] {name}: {result.get('message')}")
+                        rejected_today.add(name)
 
-        # Draw face box & name``
+                    else:
+                        print("[ERROR] Backend error:", result)
+
         cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
-        cv2.putText(frame, name, (left, top - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+        cv2.putText(
+            frame,
+            name,
+            (left, top - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            color,
+            2
+        )
 
     cv2.imshow("Smart Attendance System", frame)
 
@@ -134,4 +141,4 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
-print("[INFO] System stopped.")
+print("[INFO] Client stopped.")
