@@ -46,3 +46,11 @@ class AttendanceSession(Base):
     __table_args__ = (
         UniqueConstraint("date", "session", name="unique_date_session"),
     )
+
+class Holiday(Base):
+    __tablename__ = "holidays"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False, unique=True)
+    reason = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

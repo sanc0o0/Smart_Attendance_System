@@ -8,7 +8,7 @@ from .analytics import router as analytics_router
 from .database import SessionLocal, Base, engine
 from .models import Student, Attendance
 from .schemas import AttendanceRequest
-from .session_manager import resolve_session
+from .session_manager import resolve_session, is_holiday
 from .session_status import router as session_router
 
 
@@ -112,4 +112,37 @@ def mark_attendance(payload: AttendanceRequest, db: Session = Depends(get_db)):
             "session": session,
             "timezone": "IST"
         }
+    }
+
+@app.get("/session/status")
+def session_status(db: Session = Depends(get_db)):
+    now = datetime.now(IST)
+    today = now.date()
+    current_time = now.time()
+
+    is_holi, reason = is_holiday(db, today)
+    if is_holi:
+        return {
+            "date": str(today),
+            "is_holiday": True,
+            "holiday_reason": reason,
+            "session": None, 
+            "session_open": False
+        }
+    
+    session, error = resolve_session(db, today, current_time)
+    if error:
+        return {
+            "date": str(today),
+            "is_holiday": False,
+            "session": None,
+            "session_open": False,
+        }
+    
+    return {
+        "date": str(today),
+        "is_holiday": False,
+        "holiday_reason": None,
+        "session": session,
+        "session_open": True,
     }
