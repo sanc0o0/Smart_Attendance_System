@@ -53,6 +53,14 @@ def resolve_session(db: Session, date, current_time):
         db.commit()
         db.refresh(session)
 
+    # MANUAL OVERRIDE CHECK
+    if session.manually_closed:
+        return None, f"{session_name.capitalize()} session closed"
+    
+    if session.manually_opened:
+        return session_name, None
+    
+    
     # HARD STOP: session never reopens
     if not session.is_open:
         return None, f"{session_name.capitalize()} session closed"
