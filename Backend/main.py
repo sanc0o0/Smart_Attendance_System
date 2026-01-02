@@ -6,7 +6,7 @@ import pytz
 from .analytics import router as analytics_router
 # from . import models
 from .database import SessionLocal, Base, engine
-from .models import Student, Attendance
+from .models import Student, Attendance, AttendanceSession
 from .schemas import AttendanceRequest
 from .session_manager import resolve_session, is_holiday
 from .session_status import router as session_router
@@ -122,12 +122,17 @@ def session_status(db: Session = Depends(get_db)):
 
     is_holi, reason = is_holiday(db, today)
     if is_holi:
+        session_row = db.query(AttendanceSession).filter(
+            AttendanceSession.date == today
+        ).first()
         return {
             "date": str(today),
             "is_holiday": True,
             "holiday_reason": reason,
             "session": None, 
-            "session_open": False
+            "session_open": False,
+            "manual_override": (session_row.manually_opened or session_row.manually_closed) if session_row else False 
+            
         }
     
     session, error = resolve_session(db, today, current_time)
@@ -136,7 +141,8 @@ def session_status(db: Session = Depends(get_db)):
             "date": str(today),
             "is_holiday": False,
             "session": None,
-            "session_open": False,
+            "session_open": False
+
         }
     
     return {
@@ -144,5 +150,47 @@ def session_status(db: Session = Depends(get_db)):
         "is_holiday": False,
         "holiday_reason": None,
         "session": session,
-        "session_open": True,
+        "session_open": True
+
     }
+
+@app.post("/admin/session/open")
+def force_open_session(date:str, session: str, db:Session = Depends(get_db)):
+    session_row = db.query(AttendanceSession).filter(
+        AttendanceSession.date == date,
+        AttendanceSession.session == session
+    ).first()
+
+    if not session_row:
+        session_row = AttendanceSession(
+            date=date,
+            session=session,
+            is_open=True,
+            opened_at=datetime.now(IST).time(),
+            manually_opened=True
+        )
+        db.add(session_row)
+    else:
+        session_row.is_open = True
+        session_row.manually_opened = True
+        session_row.manually_closed = False
+    db.commit()
+        
+    return {"status": "opened"}
+
+@app.post("/admin/session/close")
+def force_close_session(date:str, session: str, db:Session = Depends(get_db)):
+    session_row = db.query(AttendanceSession).filter(
+        AttendanceSession.date == date,
+        AttendanceSession.session == session
+    ).first()
+
+    if not session_row:
+        return {"error": "Session not found"}
+    
+    session_row.is_open = False
+    session_row.manually_closed = True
+    session_row.closed_at = datetime.now(IST).time()
+    db.commit()
+        
+    return {"status": "closed"}

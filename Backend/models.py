@@ -41,6 +41,9 @@ class AttendanceSession(Base):
     is_open : Mapped[bool] = mapped_column(Boolean, default=True)
     opened_at: Mapped[time] = mapped_column(Time, nullable=False)
     closed_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    
+    manually_opened: Mapped[bool] = mapped_column(Boolean, default=False)
+    manually_closed: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
     __table_args__ = (
