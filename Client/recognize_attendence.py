@@ -11,6 +11,7 @@ import pytz
 # ----------------------------
 API_MARK_ATTENDANCE = "http://127.0.0.1:8000/mark-attendance"
 API_MARKED_TODAY = "http://127.0.0.1:8000/marked-today"
+SESSION_STATUS_URL = "http://127.0.0.1:8000/session/status"
 
 # ----------------------------
 # FACE CONFIG
@@ -64,6 +65,29 @@ def send_attendance(name: str):
         return resp.json()
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    
+
+# ----------------------------
+# CHECK SESSION STATUS
+# ----------------------------
+try:
+    status_resp = requests.get(SESSION_STATUS_URL, timeout=3)
+    status_data = status_resp.json()
+
+    if not status_data.get("session_open", False):
+        reason = status_data.get("holiday_reason") or "Session closed"
+        print(f"[INFO] Attendance disabled: {reason}")
+        exit(0)
+
+    print(
+        f"[INFO] Session active: {status_data['session']} "
+        f"({status_data['opens_at']} - {status_data['closes_at']})"
+    )
+
+except Exception as e:
+    print("[ERROR] Unable to fetch session status:", e)
+    exit(1)
+
 
 # ----------------------------
 # START CAMERA
