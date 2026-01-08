@@ -9,7 +9,7 @@ import pytz
 # ----------------------------
 # BACKEND CONFIG
 # ----------------------------
-API_MARK_ATTENDANCE = "http://127.0.0.1:8000/mark-attendance"
+API_MARK_ATTENDANCE = "http://127.0.0.1:8000/attendance/mark-attendance"
 API_MARKED_TODAY = "http://127.0.0.1:8000/marked-today"
 SESSION_STATUS_URL = "http://127.0.0.1:8000/session/status"
 
