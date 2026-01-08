@@ -1,24 +1,15 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
-import pytz
 from sqlalchemy import func
 
-from .database import SessionLocal
-from .models import Attendance, Student
+from ..database import get_db
+from ..models import Attendance, Student
+import pytz
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 IST = pytz.timezone("Asia/Kolkata")
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 @router.get("/today")
 def attendance_today(db: Session = Depends(get_db)):
@@ -42,7 +33,6 @@ def attendance_today(db: Session = Depends(get_db)):
     }
 
 
-
 @router.get("/students")
 def attendance_by_student(db: Session = Depends(get_db)):
     results = (
@@ -57,9 +47,6 @@ def attendance_by_student(db: Session = Depends(get_db)):
     )
 
     return [
-        {
-            "name": name,
-            "total_days": total_days
-        }
+        {"name": name, "total_days": total_days}
         for name, total_days in results
     ]
