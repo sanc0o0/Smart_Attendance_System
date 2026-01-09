@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 from ..database import get_db
@@ -97,43 +97,72 @@ def session_status(db: Session = Depends(get_db)):
 
 
 @router.post("/open")
-def force_open_session(date: str, session: str, db: Session = Depends(get_db)):
+def force_open_session(session: str, db: Session = Depends(get_db)):
+    today = datetime.now(IST).date()
+    current_time = datetime.now(IST).time()
+
+    # # to enforce time rule
+    # _, error = resolve_session(db, today, current_time)
+    # if error :
+    #     raise HTTPException(status_code=400, detail=error)
+
+    # to enforce time window strictly
+    if session == "morning":
+        if not (MORNING_START <= current_time <= MORNING_END):
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot open morning session"
+            )
+    elif session == "afternoon":
+        if not (AFTERNOON_START <= current_time <= AFTERNOON_END):
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot open afternoon session"
+            )
+    else:
+        raise HTTPException(status_code=400, detail="Invalid session")
+    
+    # to create or reopen session
     session_row = db.query(AttendanceSession).filter(
-        AttendanceSession.date == date,
+        AttendanceSession.date == today,
         AttendanceSession.session == session
     ).first()
 
+    # to create new session if not exists
     if not session_row:
         session_row = AttendanceSession(
-            date=date,
+            date=today,
             session=session,
             is_open=True,
             opened_at=datetime.now(IST).time(),
-            manually_opened=True
+            manually_opened=True,
+            manually_closed=False
         )
         db.add(session_row)
     else:
         session_row.is_open = True
         session_row.manually_opened = True
         session_row.manually_closed = False
-
+    
+    # this update opened_at time
     db.commit()
-    return {"status": "opened"}
+    return {"status": "opened", "session": session}
 
 
 @router.post("/close")
-def force_close_session(date: str, session: str, db: Session = Depends(get_db)):
+def force_close_session(session: str, db: Session = Depends(get_db)):
+    today = datetime.now(IST).date()
     session_row = db.query(AttendanceSession).filter(
-        AttendanceSession.date == date,
+        AttendanceSession.date == today,
         AttendanceSession.session == session
     ).first()
 
     if not session_row:
-        return {"error": "Session not found"}
+        return {"status": "already closed"}
 
     session_row.is_open = False
     session_row.manually_closed = True
     session_row.closed_at = datetime.now(IST).time()
     db.commit()
 
-    return {"status": "closed"}
+    return {"status": "closed", "session": session}

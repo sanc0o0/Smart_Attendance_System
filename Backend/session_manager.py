@@ -2,7 +2,6 @@ from datetime import time, datetime, date
 from sqlalchemy.orm import Session
 from .models import AttendanceSession, Holiday
 from .holidays import HOLIDAYS
-from .database import SessionLocal
 
 
 MORNING_START = time(8, 0)
