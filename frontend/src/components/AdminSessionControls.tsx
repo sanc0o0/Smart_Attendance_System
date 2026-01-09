@@ -2,32 +2,30 @@
 
 import { openSession, closeSession } from "@/src/lib/api";
 import { useRouter } from "next/navigation";
+import { SessionStatus } from "../types/session";
 
 
 type Props = {
-    status: {
-        session: "morning" | "afternoon" | null;
-        session_open: boolean;
-        is_holiday: boolean;
-    };
+    status: SessionStatus;
 };
 
 export default function AdminSessionControls({ status }: Props) {
     const router = useRouter();
-
+    const {session, session_open, is_holiday} = status;
+    
     const canOpenMorning =
-        !status.session_open &&
-        !status.is_holiday &&
-        status.session === null;
-
+    !is_holiday &&
+    session !== "morning";
+    
     const canOpenAfternoon = 
-        !status.session_open &&
-        !status.is_holiday &&
-        status.session === null;
-
+    !is_holiday &&
+    session !== "afternoon";
+    
     const canClose =
-        status.session_open;
-
+    !is_holiday &&
+    session !== null &&
+    session_open;
+    
     async function handleOpen(session: "morning" | "afternoon") {
         try {
             await openSession(session);
@@ -38,8 +36,8 @@ export default function AdminSessionControls({ status }: Props) {
         }
     }
     async function handleClose() {
-        if (!status.session) return;
-        await closeSession(status.session);
+        if (!session) return;
+        await closeSession(session);
         router.refresh();
     }
 

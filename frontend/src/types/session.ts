@@ -1,13 +1,27 @@
+export type SessionName = "morning" | "afternoon";
+
 export type SessionStatus = {
-    date: string | Date;
-    session: "morning" | "afternoon" | null;
+    date: string ;
+    current_time: string ;
+
+    // holiday info
+    is_holiday: boolean;
+    holiday_reason: string | null;
+
+    // session info
+    session: SessionName | null;
     session_open: boolean;
-    opened_at?: string | Date;
-    manual?: boolean;
+
+    // time windows info
+    opens_at: string | null;
+    closes_at: string | null;
+
+    // admin override
+    manual_override: boolean;
 };
 
 export type TodayAnalytics = {
-    date: string | Date;
+    date: string ;
     morning: number;
     afternoon: number;
     total: number;
