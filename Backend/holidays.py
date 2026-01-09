@@ -1,6 +1,6 @@
 from datetime import date
 
-# TEMP: hardcoded holidays (YYYY, M, D)
+#hardcoded holidays (YYYY, M, D)
 HOLIDAYS = {
     date(2026, 1, 26),  # Republic Day
     date(2026, 8, 15),  # Independence Day
