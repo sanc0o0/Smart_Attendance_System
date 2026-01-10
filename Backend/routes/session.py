@@ -8,6 +8,7 @@ from ..session_manager import (
     MORNING_START, MORNING_END,
     AFTERNOON_START, AFTERNOON_END
 )
+from ..session_manager import is_valid_admin_open_time
 from ..holidays import HOLIDAYS
 import pytz
 
@@ -106,6 +107,21 @@ def force_open_session(session: str, db: Session = Depends(get_db)):
     # if error :
     #     raise HTTPException(status_code=400, detail=error)
 
+    # weekend and holidays hard stop
+    is_holi, reason = is_holiday(db, today)
+    if is_holi:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot open session on holiday"
+        )
+    
+    # explicit time window check
+    if not is_valid_admin_open_time(session, current_time):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot open {session} session outside the time window"
+        )
+
     # to enforce time window strictly
     if session == "morning":
         if not (MORNING_START <= current_time <= MORNING_END):
@@ -143,6 +159,7 @@ def force_open_session(session: str, db: Session = Depends(get_db)):
         session_row.is_open = True
         session_row.manually_opened = True
         session_row.manually_closed = False
+        session_row.opened_at = current_time
     
     # this update opened_at time
     db.commit()
@@ -157,7 +174,7 @@ def force_close_session(session: str, db: Session = Depends(get_db)):
         AttendanceSession.session == session
     ).first()
 
-    if not session_row:
+    if not session_row or not session_row.is_open:
         return {"status": "already closed"}
 
     session_row.is_open = False

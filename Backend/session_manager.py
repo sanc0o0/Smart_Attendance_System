@@ -78,4 +78,10 @@ def is_holiday(db: Session, today: date):
     
     return False, None
 
+def is_valid_admin_open_time(session: str, current_time: time) -> bool:
+    if session == "morning":
+        return MORNING_START <= current_time <= MORNING_END
+    if session == "afternoon":
+        return AFTERNOON_START <= current_time <= AFTERNOON_END
+    return False
 
