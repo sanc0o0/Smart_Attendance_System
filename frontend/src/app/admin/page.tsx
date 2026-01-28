@@ -9,21 +9,24 @@ import AnalyticsCard from "@/src/components/AnalyticsCard";
 import StudentTable from "@/src/components/StudentTable";
 import AdminSessionControls from "@/src/components/AdminSessionControls";
 import Skeleton from "@/src/components/Skeleton";
-
+import LogoutButton from "@/src/components/logout";
 export default async function AdminPage() {
     const [status, today, students] = await Promise.all([
         getSessionStatus(),
         getTodayAnalytics(),
         getStudentAnalytics(),
     ]);
-
+    
     return (
         <main className="max-w-5xl mx-auto p-6 space-y-8 text-black">
-            <header>
-                <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-                <p className="text-gray-500">
-                    Date: {new Date(status.date).toDateString()}
-                </p>
+            <header className="flex justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+                    <p className="text-gray-500">
+                        Date: {new Date(status.date).toDateString()}
+                    </p>
+                </div>
+                <LogoutButton/>
             </header>
 
             <StatusCard status={status} />

@@ -62,7 +62,7 @@ export default function StatusCard({ status }: Props) {
                 <h2 className="text-xl font-semibold">Session Status</h2>
 
                 <span
-                    className={`px-3 py-1 text-sm font-bold text-white rounded-full ${ui.badge}`}
+                    className={`px-4 py-2 text-sm font-bold text-white rounded-full  ${ui.badge}`}
                 >
                     {ui.label}
                 </span>

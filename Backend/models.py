@@ -57,3 +57,34 @@ class Holiday(Base):
     date = Column(Date, nullable=False, unique=True)
     reason = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    phone = Column(String, nullable=True)
+
+    role = Column(String, default="admin")  
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+# class User(Base):
+#     __tablename__ = "users"
+
+#     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+#     name: Mapped[str] = mapped_column(String, nullable=False)
+#     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+#     phone: Mapped[str | None] = mapped_column(String, nullable=True)
+
+#     role: Mapped[str] = mapped_column(String, default="admin")
+#     password_hash: Mapped[str] = mapped_column(String, nullable=False)
+
+#     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+#     created_at: Mapped = mapped_column(
+#         DateTime(timezone=True),
+#         server_default=func.now()
+#     )
