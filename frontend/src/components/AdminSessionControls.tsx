@@ -14,23 +14,23 @@ type Props = {
 export default function AdminSessionControls({ status }: Props) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const {session, session_open, is_holiday} = status;
-    
+    const { session, session_open, is_holiday } = status;
+
     const canOpenMorning =
-    !is_holiday &&
-    !session_open &&
-    session !== "morning" || session === null;
-    
-    const canOpenAfternoon = 
-    !is_holiday &&
-    !session_open &&
-    session !== "afternoon" || session === null;
-    
+        !is_holiday &&
+        !session_open &&
+        session !== "morning" || session === null;
+
+    const canOpenAfternoon =
+        !is_holiday &&
+        !session_open &&
+        session !== "afternoon" || session === null;
+
     const canClose =
-    !is_holiday &&
-    session !== null &&
-    session_open;
-    
+        !is_holiday &&
+        session !== null &&
+        session_open;
+
     async function handleOpen(session: "morning" | "afternoon") {
         try {
             setLoading(true);
@@ -43,7 +43,7 @@ export default function AdminSessionControls({ status }: Props) {
                 message ||
                 `Cannot open ${session} session outside time window`
             );
-        } finally{
+        } finally {
             setLoading(false);
         }
     }
@@ -56,12 +56,12 @@ export default function AdminSessionControls({ status }: Props) {
             await closeSession(session);
             toast.success("Session closed");
             router.refresh();
-        } catch(error: unknown) {
+        } catch (error: unknown) {
             const message = error instanceof Error ? error.message : String(error);
             toast.error(message || "Cannot close session before time");
         } finally {
             setLoading(false);
-        } 
+        }
     }
 
     return (
