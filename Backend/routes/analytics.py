@@ -35,10 +35,15 @@ def attendance_today(db: Session = Depends(get_db)):
 
 @router.get("/students")
 def attendance_by_student(db: Session = Depends(get_db)):
+    # total distinct attendance days in system
+    total_days = db.query(
+        func.count(func.distinct(Attendance.attendance_date))
+    ).scalar() or 0
+
     results = (
         db.query(
             Student.name,
-            func.count(func.distinct(Attendance.attendance_date)).label("total_days")
+            func.count(func.distinct(Attendance.attendance_date)).label("present_days")
         )
         .join(Attendance)
         .group_by(Student.id)
@@ -47,6 +52,11 @@ def attendance_by_student(db: Session = Depends(get_db)):
     )
 
     return [
-        {"name": name, "total_days": total_days}
-        for name, total_days in results
+        {
+            "name": name,
+            "present_days": present_days,
+            "total_days": total_days
+        }
+        for name, present_days in results
     ]
+
