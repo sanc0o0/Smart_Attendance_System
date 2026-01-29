@@ -5,8 +5,8 @@ from typing import Dict
 
 from Backend.schemas import AdminLoginPayload
 
-from ..database import get_db
-from ..models import User
+from .database import get_db
+from .models import User
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

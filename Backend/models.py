@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Date, Time, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
-from .database import Base
+from database import Base
 from sqlalchemy.types import Boolean
 from datetime import time
 

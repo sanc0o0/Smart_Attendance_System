@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
-from ..database import get_db
-from ..models import Attendance, Student
-from ..schemas import AttendanceRequest
-from ..session_manager import resolve_session
+from .database import get_db
+from .models import Attendance, Student
+from .schemas import AttendanceRequest
+from .session_manager import resolve_session
 import pytz
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
