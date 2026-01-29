@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import pytz
 
-from .database import Base, engine
-from .routes import api_router
+from Backend.database import Base, engine
+from Backend.routes import api_router
 import os 
 
 
