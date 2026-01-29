@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from sqlalchemy import func
 
-from .database import get_db
-from .models import Attendance, Student
+from database import get_db
+from models import Attendance, Student
 import pytz
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])

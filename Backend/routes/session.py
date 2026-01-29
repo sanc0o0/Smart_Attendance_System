@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
-from .database import get_db
-from .models import AttendanceSession
-from .session_manager import resolve_session, is_holiday
-from .session_manager import (
+from database import get_db
+from models import AttendanceSession
+from session_manager import resolve_session, is_holiday
+from session_manager import (
     MORNING_START, MORNING_END,
     AFTERNOON_START, AFTERNOON_END
 )
-from .session_manager import is_valid_admin_open_time
-from .holidays import HOLIDAYS
+from session_manager import is_valid_admin_open_time
+from holidays import HOLIDAYS
 import pytz
 
 router = APIRouter(prefix="/session", tags=["Session"])
