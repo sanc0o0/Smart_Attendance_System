@@ -4,7 +4,7 @@ import { openSession, closeSession } from "@/src/lib/api";
 import { useRouter } from "next/navigation";
 import { SessionStatus } from "../types/session";
 import { useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 
 type Props = {
